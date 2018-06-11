@@ -1,0 +1,19 @@
+{
+  "name": "chrome_gather",
+  "version": "0.1.0",
+  "description": "Gather data about HTTP requests with Chrome",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "chrome-gather": "cli.js"
+  },
+  "dependencies": {
+    "chrome-har-capturer": "^0.13.0",
+    "commander": "2.x.x",
+    "puppeteer": "^1.5.0"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,6 @@
+*.png
+*.har
+*.json
+*.egg-info
+*.pyc
+node_modules
