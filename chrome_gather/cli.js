@@ -93,55 +93,52 @@ function tallyResponses() {
 }
 
 (async () => {
-  let args = [ '--remote-debugging-port=' + program.port ];
-  // This is terrible, but Chrome makes us run with no sandbox if we're running
-  // as root.
-  if (process.env.USER === 'root') {
-    args.push('--no-sandbox');
-  }
-  const browser = await puppeteer.launch({ args: args });
-  const page = await browser.newPage();
-  const contentPromises = [];
-  const requestIds = new Set();
-
-  // register events listeners
-  const client = await page.target().createCDPSession();
-  await client.send('Page.enable');
-  await client.send('Network.enable');
-  observe.forEach(method => {
-    client.on(method, params => {
-      events.push({ method, params });
-      if (method === 'Network.loadingFinished') {
-        requestIds.add(params.requestId);
-      }
-    });
-  });
-
-  await page.setViewport({ width: program.width, height: program.height });
   try {
-    await page.goto(url, {
-      timeout: program.timeout,
-      waitUntil: 'load'
+    let args = [ '--remote-debugging-port=' + program.port ];
+    // This is terrible, but Chrome makes us run with no sandbox if we're running
+    // as root.
+    if (process.env.USER === 'root') {
+      args.push('--no-sandbox');
+    }
+    const browser = await puppeteer.launch({ args: args });
+    const page = await browser.newPage();
+    const contentPromises = [];
+    const requestIds = new Set();
+
+    // register events listeners
+    const client = await page.target().createCDPSession();
+    await client.send('Page.enable');
+    await client.send('Network.enable');
+    observe.forEach(method => {
+      client.on(method, params => {
+        events.push({ method, params });
+        if (method === 'Network.loadingFinished') {
+          requestIds.add(params.requestId);
+        }
+      });
     });
-  } catch (e) {
-    console.warn(e);
-    //process.exit(1);
-  }
-  await page.screenshot({path: program.screenshot, fullPage: true});
-  await Promise.all(Array.from(requestIds).map(rid => fetchContent(client, rid)));
-  tallyResponses();
-  if (program.events) {
-    await promisify(fs.writeFile)(program.events, JSON.stringify(events))
-  }
-  let har;
-  try {
-    har = await chromeHar.fromLog(url, events, { content: true });
+
+    await page.setViewport({ width: program.width, height: program.height });
+    await page.goto(url, { timeout: program.timeout, waitUntil: 'load' });
+    await page.screenshot({path: program.screenshot, fullPage: true});
+    await Promise.all(Array.from(requestIds).map(rid => fetchContent(client, rid)));
+    tallyResponses();
+
+    if (program.events) {
+      fs.writeFile(program.events, JSON.stringify(events));
+    }
+
+    let har;
+    try {
+      har = await chromeHar.fromLog(url, events, { content: true });
+    } catch (e) {
+      console.warn(e.message);
+      har = await chromeHar.fromLog(url, events);
+    }
+
+    await promisify(fs.writeFile)(program.har, JSON.stringify(har));
+    await browser.close();
   } catch (e) {
     console.error(e);
   }
-  if (!har) {
-    har = await chromeHar.fromLog(url, events);
-  }
-  await promisify(fs.writeFile)(program.har, JSON.stringify(har));
-  await browser.close();
 })();
