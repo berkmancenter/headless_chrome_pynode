@@ -118,6 +118,15 @@ function tallyResponses() {
       });
     });
 
+    // This attempts to handle "Page crash" errors. See
+    // https://github.com/GoogleChrome/puppeteer/issues/1454
+    // and 
+    // https://github.com/GoogleChrome/puppeteer/issues/1862
+    page.on('error', err => {
+      console.error(err);
+      process.exit(1);
+    });
+
     await page.setViewport({ width: program.width, height: program.height });
     await page.goto(url, { timeout: program.timeout, waitUntil: 'load' });
     await page.screenshot({path: program.screenshot, fullPage: true});
