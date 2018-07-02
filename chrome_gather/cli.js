@@ -120,7 +120,7 @@ function tallyResponses() {
 
     // This attempts to handle "Page crash" errors. See
     // https://github.com/GoogleChrome/puppeteer/issues/1454
-    // and 
+    // and
     // https://github.com/GoogleChrome/puppeteer/issues/1862
     page.on('error', err => {
       console.error(err);

@@ -4,7 +4,7 @@ class Client:
     DEFAULT_DIMS = (1200, 800)
 
     def __init__(self, width=DEFAULT_DIMS[0], height=DEFAULT_DIMS[1],
-            node=None, port=None):
+            node=None, port=None, timeout=180):
         self.width = width
         self.height = height
         if node is None:
@@ -14,6 +14,7 @@ class Client:
         if port is None:
             port = random.randint(1024, 65535)
         self.port = port
+        self.timeout = timeout
         self.result_dir = tempfile.mkdtemp(prefix='headless-chrome-')
 
     def _command(self, url, har, screenshot):
@@ -21,6 +22,7 @@ class Client:
         return [self.node, os.path.join(this_dir, '..', 'chrome_gather', 'cli.js'),
                 '--width', str(self.width), '--height', str(self.height),
                 '--har', har, '--screenshot', screenshot,
+                '--timeout', self.timeout * 1000,
                 url]
 
     def capture(self, url, har='har.json', screenshot='screenshot.png'):
