@@ -22,7 +22,7 @@ class Client:
         return [self.node, os.path.join(this_dir, '..', 'chrome_gather', 'cli.js'),
                 '--width', str(self.width), '--height', str(self.height),
                 '--har', har, '--screenshot', screenshot,
-                '--timeout', self.timeout * 1000,
+                '--timeout', str(self.timeout * 1000),
                 url]
 
     def capture(self, url, har='har.json', screenshot='screenshot.png'):
