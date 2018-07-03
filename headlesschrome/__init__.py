@@ -29,5 +29,10 @@ class Client:
         har = os.path.join(self.result_dir, har)
         screenshot = os.path.join(self.result_dir, screenshot)
         logging.debug(self._command(url, har, screenshot))
-        subprocess.check_call(self._command(url, har, screenshot))
+        try:
+            subprocess.check_output(self._command(url, har, screenshot),
+                    stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            msg = e.output.decode('utf-8').splitlines()[0]
+            raise RuntimeError(msg)
         return { 'har': har, 'screenshot': screenshot }
