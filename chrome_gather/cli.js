@@ -8,13 +8,20 @@ function parse(i) {
   return parseInt(i);
 }
 
+function detectFalse(s) {
+  return s.toLowerCase().trim() === 'false' ? false : s;
+}
+
 program
     .usage('[options] URL')
     .option('-w, --width <px>', 'browser width in pixels', parse, 1200)
     .option('-h, --height <px>', 'browser height in pixels', parse, 800)
-    .option('-o, --har <file>', 'file to write HAR to', 'capture.har')
-    .option('-s, --screenshot <file>', 'file to write the screenshot to', 'capture.png')
+    .option('-o, --har <file>', 'file to write HAR to', detectFalse, 'capture.har')
+    .option('-s, --screenshot <file>', 'file to write the screenshot to', detectFalse, 'capture.png')
     .option('-e, --events <file>', 'file to write the events log to', false)
+    .option('-c, --js <code>', 'javascript to evaluate in page context', detectFalse, false)
+    .option('-r, --jsresult <file>', 'file to write the result of ' +
+      'running --js to', detectFalse, false)
     .option('-p, --port <integer>', 'remote debugging port to use for Chrome',
       parse, 9222)
     .option('-t, --timeout <integer>', 'wait this many milliseconds for page to load',
@@ -107,16 +114,19 @@ function tallyResponses() {
 
     // register events listeners
     const client = await page.target().createCDPSession();
-    await client.send('Page.enable');
-    await client.send('Network.enable');
-    observe.forEach(method => {
-      client.on(method, params => {
-        events.push({ method, params });
-        if (method === 'Network.loadingFinished') {
-          requestIds.add(params.requestId);
-        }
+
+    if (program.har) {
+      await client.send('Page.enable');
+      await client.send('Network.enable');
+      observe.forEach(method => {
+        client.on(method, params => {
+          events.push({ method, params });
+          if (method === 'Network.loadingFinished') {
+            requestIds.add(params.requestId);
+          }
+        });
       });
-    });
+    }
 
     // This attempts to handle "Page crash" errors. See
     // https://github.com/GoogleChrome/puppeteer/issues/1454
@@ -129,23 +139,38 @@ function tallyResponses() {
 
     await page.setViewport({ width: program.width, height: program.height });
     await page.goto(url, { timeout: program.timeout, waitUntil: 'load' });
-    await page.screenshot({path: program.screenshot, fullPage: true});
-    await Promise.all(Array.from(requestIds).map(rid => fetchContent(client, rid)));
-    tallyResponses();
+
+    if (program.js) {
+      const result = await page.evaluate(program.js);
+      if (program.jsresult) {
+        await promisify(fs.writeFile)(program.jsresult, JSON.stringify(result).trim());
+      }
+    }
+
+    if (program.screenshot) {
+      await page.screenshot({path: program.screenshot, fullPage: true});
+    }
+
+    if (program.har) {
+      await Promise.all(Array.from(requestIds).map(rid => fetchContent(client, rid)));
+      tallyResponses();
+    }
 
     if (program.events) {
       fs.writeFile(program.events, JSON.stringify(events));
     }
 
-    let har;
-    try {
-      har = await chromeHar.fromLog(url, events, { content: true });
-    } catch (e) {
-      console.warn(e.message);
-      har = await chromeHar.fromLog(url, events);
+    if (program.har) {
+      let har;
+      try {
+        har = await chromeHar.fromLog(url, events, { content: true });
+      } catch (e) {
+        console.warn(e.message);
+        har = await chromeHar.fromLog(url, events);
+      }
+      await promisify(fs.writeFile)(program.har, JSON.stringify(har));
     }
 
-    await promisify(fs.writeFile)(program.har, JSON.stringify(har));
     await browser.close();
   } catch (e) {
     console.error(e);
