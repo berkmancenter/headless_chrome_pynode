@@ -31,7 +31,7 @@ class Client:
         screenshot = os.path.join(self.result_dir, screenshot)
         logging.debug(self._command(url, har, screenshot))
         try:
-            out = subprocess.check_output(self._command(url, har, screenshot),
+            subprocess.check_output(self._command(url, har, screenshot),
                     stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             msg = e.output.decode('utf-8').splitlines()[0]
@@ -41,9 +41,9 @@ class Client:
     def run_js(self, url, js):
         with tempfile.NamedTemporaryFile() as fp:
             try:
-                subprocess.run(
+                subprocess.check_output(
                         self._command(url, 'false', 'false', js, fp.name),
-                        check=True)
+                        stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 msg = e.output.decode('utf-8').splitlines()[0]
                 raise RuntimeError(msg)
