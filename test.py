@@ -11,7 +11,7 @@ class TestHeadlessChrome(unittest.TestCase):
 
     def test_timeout(self):
         c = headlesschrome.Client(timeout=1)
-        with self.assertRaisesRegex(RuntimeError, 'Timeout'):
+        with self.assertRaisesRegexp(RuntimeError, 'Timeout'):
             result = c.capture('http://wsj.com')
 
     def test_run_js(self):
